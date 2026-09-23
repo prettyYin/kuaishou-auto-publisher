@@ -317,10 +317,8 @@ class AutoApp:
 
         cards_bar = ttk.Frame(self.tab_today)
         cards_bar.pack(fill="x", padx=14, pady=(2, 0))
-        ttk.Button(cards_bar, text="＋ 添加账号", command=self.add_account).pack(side="left")
-        ttk.Button(cards_bar, text="－ 删除最后一个账号", command=self.remove_last_account).pack(side="left", padx=6)
         self.account_count_label = ttk.Label(cards_bar, text="", font=SMALL_FONT, foreground="#666666")
-        self.account_count_label.pack(side="left", padx=8)
+        self.account_count_label.pack(side="left")
 
         action_box = ttk.LabelFrame(self.tab_today, text=" 开始干活 ")
         action_box.pack(fill="x", padx=12, pady=(6, 4))
@@ -334,8 +332,8 @@ class AutoApp:
         self.btn_rename.pack(side="left", padx=4)
         self.btn_parallel = ttk.Button(
             bar,
-            text="并行执行已勾选账号",
-            style="Big.TButton",
+            text="▶ 同步开始上传发布",
+            style="Go.TButton",
             command=lambda: self.start_run("publish", parallel=True),
         )
         self.btn_parallel.pack(side="left", padx=4)
@@ -357,11 +355,6 @@ class AutoApp:
         self.confirm_rename = tk.BooleanVar(
             value=bool(self.cfg.get("jinniu", {}).get("confirm_mapping", False))
         )
-        self.limit_var = tk.StringVar(value="0")
-        ttk.Label(bar, text="本次每账号最多处理").pack(side="right", padx=(10, 2))
-        ttk.Spinbox(bar, from_=0, to=200, width=4, textvariable=self.limit_var).pack(side="right")
-        ttk.Label(bar, text="条（0=全部）").pack(side="right")
-
         options_bar = ttk.Frame(action_box)
         options_bar.pack(fill="x", padx=8, pady=(0, 8))
         ttk.Checkbutton(
@@ -430,7 +423,7 @@ class AutoApp:
 
             _ttk.Label(
                 self.cards_container,
-                text="还没有账号。点下面的「＋ 添加账号」，或者点右上角「引导设置」三步配好。",
+                text="还没有账号。请到「设置」页添加账号，或者点右上角「引导设置」三步配好。",
                 font=LABEL_FONT,
                 foreground="#888888",
             ).pack(anchor="w", padx=12, pady=16)
@@ -449,37 +442,6 @@ class AutoApp:
         card.dir_var.set(account.get("video_dir") or "")
         saved = self.copy_store.get(account.get("name") or "")
         card.set_copies(saved.get("raw", ""), saved.get("strip_index", False), saved.get("batch", False))
-
-    def add_account(self) -> None:
-        self.save_from_cards()
-        accounts = self.cfg.setdefault("accounts", [])
-        accounts.append(cfgmod.default_account(len(accounts)))
-        self.save_config()
-        self.rebuild_cards()
-        self.settings_tab.load_from_config()
-        self.refresh_all()
-        self.append_log("已添加一个账号；账号名请到「设置」页填写，素材文件夹在「今天要发的」卡片上选择。")
-
-    def remove_last_account(self) -> None:
-        accounts = self.cfg.get("accounts", [])
-        if not accounts:
-            messagebox.showinfo("没有账号", "现在没有账号可以删除。", parent=self.root)
-            return
-        name = accounts[-1].get("name") or "最后一个账号"
-        if not messagebox.askyesno(
-            "删除账号",
-            "确定要删除「%s」吗？\n（只删除工具里的设置，不会动你的视频文件和账号）" % name,
-            parent=self.root,
-        ):
-            return
-        self.save_from_cards()
-        accounts = self.cfg.setdefault("accounts", [])
-        accounts.pop()
-        self.save_config()
-        self.rebuild_cards()
-        self.settings_tab.load_from_config()
-        self.refresh_all()
-        self.append_log("已删除账号：%s" % name)
 
     def save_copies(self, card) -> None:
         name = card.name_var.get().strip()
@@ -1043,10 +1005,6 @@ class AutoApp:
     def _validate_selection(self, mode: str):
         targets = []
         problems = []
-        try:
-            limit = int(float(self.limit_var.get()))
-        except Exception:
-            limit = 0
         for card in self.cards:
             if not card.enabled.get():
                 continue
@@ -1061,9 +1019,6 @@ class AutoApp:
                 if not result.get("ok"):
                     problems.append("%s：%s" % (name, result.get("message")))
                     continue
-            if limit > 0:
-                videos = list(videos)[:limit]
-                copies = list(copies)[:limit]
             settings = settings_for_videos(name, videos, self.publish_settings)
             if mode in ("dry", "publish"):
                 for item_index, setting in enumerate(settings, start=1):
