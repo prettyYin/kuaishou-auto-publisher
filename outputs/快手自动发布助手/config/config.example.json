@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "automation_data_dir": "%LOCALAPPDATA%\\KuaishouAuto",
+  "browser_exe": "",
+  "browser_user_data_dir": "",
+  "creator": {
+    "publish_url": "https://cp.kuaishou.com/article/publish/video",
+    "works_url": "",
+    "upload_timeout_seconds": 1800,
+    "upload_settle_seconds": 10,
+    "publish_confirm_timeout_seconds": 600,
+    "post_publish_wait_seconds": 15,
+    "inter_account_wait_seconds": 30,
+    "daily_total_limit": 120,
+    "manual_rescue": true,
+    "on_resume_dialog": "dismiss",
+    "uncheck_download": true,
+    "author_declaration_options": [
+      "内容为AI生成",
+      "演绎情节，仅供娱乐",
+      "个人观点，仅供参考",
+      "素材来源于网络"
+    ],
+    "author_statement_retries": 2,
+    "clear_author_statement_when_empty": true,
+    "schedule_min_lead_minutes": 60,
+    "schedule_max_days": 14,
+    "auto_rename_when_scheduled": false,
+    "parallel_max_accounts": 2,
+    "parallel_start_interval_seconds": 0,
+    "parallel_risk_acked": false,
+    "extra_actions": [],
+    "confirm_before_run": false
+  },
+  "jinniu": {
+    "video_library_url": "https://niu.e.kuaishou.com/material/supervideo",
+    "filter_field": "素材名称",
+    "on_mismatch": "ask",
+    "retry_wait_seconds": 60,
+    "rename_mode": "auto",
+    "list_order": "newest_first",
+    "confirm_mapping": false,
+    "sync_wait_seconds": 60,
+    "duration_check": "auto",
+    "fallback_keyword_chars": 12,
+    "allow_short_keyword": false,
+    "duration_tolerance_seconds": 1,
+    "settle_wait_seconds": 5,
+    "material_row_limit": 60
+  },
+  "accounts": []
+}

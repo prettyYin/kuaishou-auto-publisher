@@ -1,0 +1,237 @@
+{
+  "_说明": "这里放两个平台的页面元素规则。每个步骤可以写多条候选规则，脚本会从上到下依次尝试。勘查之后由助手补全，页面改版时只需要改这个文件。",
+  "creator": {
+    "file_input": [
+      { "css": "input[type=file]" }
+    ],
+    "upload_trigger": [
+      { "css": "button[class*='_upload-btn_']" },
+      { "css": "div[class*='_upload-text_']" },
+      { "text": "上传视频" },
+      { "text": "上传作品" },
+      { "text": "点击上传" }
+    ],
+    "resume_dialog": [
+      { "css": "button[class*='_renounce-btn_']" },
+      { "text": "放弃" }
+    ],
+    "title_input": [
+      { "css": "#work-description-edit" },
+      { "css": "[placeholder*='作品描述']" },
+      { "css": "[contenteditable=true]" },
+      { "placeholder": "添加作品描述" },
+      { "placeholder": "作品描述" },
+      { "placeholder": "添加描述" },
+      { "css": "textarea" }
+    ],
+    "publish_button": [
+      { "css": "[class*='_edit-section-btns_'] div[class*='_button-primary_']" },
+      { "css": "div[class*='_button-primary_']" },
+      { "role": "button", "name": "发布", "exact": true },
+      { "role": "button", "name": "发布" },
+      { "text": "发布" }
+    ],
+    "publish_confirm_button": [
+      { "text": "确认发布" },
+      { "text": "确定" }
+    ],
+    "success_toast": [
+      { "css": ".ant-message-success" },
+      { "text": "发布成功" },
+      { "text": "提交成功" }
+    ],
+    "author_statement_select": [
+      { "css": "div._edit-form-item_1quq7_7:has(label:has-text('作者声明')) div.ant-select-selector" },
+      { "css": "div:has(> label:has-text('作者声明')) div.ant-select-selector" },
+      { "css": "div[class*='edit-form-item']:has(label:has-text('作者声明')) .ant-select-selector" }
+    ],
+    "author_statement_selected": [
+      { "css": "div._edit-form-item_1quq7_7:has(label:has-text('作者声明')) .ant-select-selection-item" },
+      { "css": "div:has(> label:has-text('作者声明')) .ant-select-selection-item" }
+    ],
+    "author_statement_placeholder": [
+      { "css": "div._edit-form-item_1quq7_7:has(label:has-text('作者声明')) .ant-select-selection-placeholder" },
+      { "css": "div:has(> label:has-text('作者声明')) .ant-select-selection-placeholder" }
+    ],
+    "author_statement_clear": [
+      { "css": "div._edit-form-item_1quq7_7:has(label:has-text('作者声明')) .ant-select-clear" },
+      { "css": "div:has(> label:has-text('作者声明')) .ant-select-clear" }
+    ],
+    "author_statement_option": [
+      { "css": ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option" },
+      { "css": ".ant-select-dropdown .ant-select-item-option" }
+    ],
+    "immediate_radio": [
+      { "css": "div:has(> div:has-text('发布时间')) label:has-text('立即发布') input[type=radio]" },
+      { "css": "div[class*='publish-time'] label:has-text('立即发布') input[type=radio]" },
+      { "css": "label:has-text('立即发布') input[type=radio]" },
+      { "text": "立即发布" }
+    ],
+    "schedule_radio": [
+      { "css": "div:has(> div:has-text('发布时间')) label:has-text('定时发布') input[type=radio]" },
+      { "css": "div[class*='publish-time'] label:has-text('定时发布') input[type=radio]" },
+      { "css": "label:has-text('定时发布') input[type=radio]" },
+      { "text": "定时发布" }
+    ],
+    "schedule_input": [
+      { "css": "input[placeholder='选择日期时间']" },
+      { "css": ".ant-picker-input input[placeholder*='请选择']" },
+      { "css": "div[class*='publish-time'] .ant-picker-input input" },
+      { "css": "div.ant-picker input" },
+      { "css": ".ant-picker-input input" },
+      { "css": "input[placeholder*='日期']" },
+      { "css": "input[placeholder*='时间']" },
+      { "css": "input[placeholder*='发布时间']" }
+    ],
+    "schedule_selected": [
+      { "css": "input[placeholder='选择日期时间']" },
+      { "css": "div[class*='publish-time'] .ant-picker-input input" },
+      { "css": "div.ant-picker input" },
+      { "css": ".ant-picker-input input" },
+      { "css": "input[placeholder*='日期']" },
+      { "css": "input[placeholder*='时间']" },
+      { "css": "input[placeholder*='发布时间']" }
+    ],
+    "schedule_dropdown": [
+      { "css": ".ant-picker-dropdown:not(.ant-picker-dropdown-hidden)" }
+    ],
+    "schedule_prev_month": [
+      { "css": ".ant-picker-dropdown:not(.ant-picker-dropdown-hidden) button.ant-picker-header-prev-btn" }
+    ],
+    "schedule_next_month": [
+      { "css": ".ant-picker-dropdown:not(.ant-picker-dropdown-hidden) button.ant-picker-header-next-btn" }
+    ],
+    "schedule_year_label": [
+      { "css": ".ant-picker-dropdown:not(.ant-picker-dropdown-hidden) .ant-picker-year-btn" }
+    ],
+    "schedule_month_label": [
+      { "css": ".ant-picker-dropdown:not(.ant-picker-dropdown-hidden) .ant-picker-month-btn" }
+    ],
+    "schedule_time_columns": [
+      { "css": ".ant-picker-dropdown:not(.ant-picker-dropdown-hidden) .ant-picker-time-panel-column" }
+    ],
+    "schedule_ok_button": [
+      { "css": ".ant-picker-dropdown:not(.ant-picker-dropdown-hidden) .ant-picker-ok button" },
+      { "text": "确定", "exact": true }
+    ],
+    "failure_toast": [
+      { "css": ".ant-message-error" },
+      { "text": "上传失败" },
+      { "text": "发布失败" }
+    ],
+    "continue_button": [
+      { "text": "继续发布" },
+      { "text": "再发一条" }
+    ],
+    "login_hint": [
+      { "text": "扫码登录" }
+    ]
+  },
+  "jinniu": {
+    "popup_close": [
+      { "css": "button.ant-modal-close" },
+      { "css": ".ant-modal-close-x" },
+      { "css": ".ant-notification-notice-close" },
+      { "css": ".ant-drawer-close" },
+      { "css": ".ant-modal-wrap:not([style*='display: none']) [data-adview='true'] [class*='icon___']:last-child" },
+      { "css": ".ant-modal-wrap:not([style*='display: none']) [data-adview='true'] svg" },
+      { "css": ".ant-modal-wrap:not([style*='display: none']) [class*='modalWrap'] [class*='icon___']" }
+    ],
+    "material_row": [
+      { "css": "[class*='fixedDataTableLayout_body'] [class*='rowWrapper']" },
+      { "css": "div[class*='rowWrapper']:not(:has([class*='fixedDataTableLayout_header']))" },
+      { "css": "tbody tr" },
+      { "css": "[class*=ant-table-row]" }
+    ],
+    "material_checkbox": [
+      { "css": "input.ant-checkbox-input" },
+      { "css": "input[type=checkbox]" }
+    ],
+    "operation_more": [
+      { "css": "[class*='operationHover']" }
+    ],
+    "more_filters": [
+      { "css": "button[class*='filterButton']" },
+      { "text": "更多筛选" }
+    ],
+    "search_input": [
+      { "placeholder": "请输入素材名称" },
+      { "css": "input.ant-input[placeholder*='素材名称']" },
+      { "placeholder": "搜索" }
+    ],
+    "filter_field_select": [
+      { "css": "input#rc_select_0" },
+      { "css": "div.ant-select-selector:has(#rc_select_0)" }
+    ],
+    "filter_field_selected": [
+      { "css": "div.ant-select-selector:has(#rc_select_0) .ant-select-selection-item" },
+      { "css": ".ant-select-selection-item[title='素材名称']" }
+    ],
+    "filter_field_option": [
+      { "css": "div.ant-select-dropdown:not([class*='hidden']) div.ant-select-item-option[title='素材名称']" },
+      { "text": "素材名称", "exact": true }
+    ],
+    "search_button": [
+      { "css": "[class*='inputWrapper'] .anticon-search" },
+      { "css": "svg[data-icon='search']" },
+      { "text": "查询" }
+    ],
+    "search_box": [
+      { "css": "[class*='inputWrapper'] input.ant-input" },
+      { "css": "[class*='inputWrapper'] input" },
+      { "css": "input.ant-input[placeholder*='素材名称']" },
+      { "css": "input.ant-input[placeholder*='视频ID']" }
+    ],
+    "material_name_cell": [
+      { "css": "[class*=name]" },
+      { "css": "td" }
+    ],
+    "batch_rename_button": [
+      { "text": "修改视频名称" },
+      { "text": "批量修改视频名称" },
+      { "text": "批量改名" },
+      { "text": "批量重命名" },
+      { "text": "批量编辑" }
+    ],
+    "batch_bar": [
+      { "css": "[class*='batchEditBar']" }
+    ],
+    "row_name_target": [
+      { "css": "[class*='videoName']" },
+      { "css": "[class*='name']" }
+    ],
+    "row_rename_pencil": [
+      { "css": "[class*='editIcon']" },
+      { "css": "[class*='hoverEdit']" },
+      { "css": "svg[data-icon*='edit']" }
+    ],
+    "single_rename_button": [
+      { "text": "改名" },
+      { "text": "重命名" }
+    ],
+    "rename_dialog": [
+      { "css": ".ant-modal-content" },
+      { "css": "[class*='ant-modal']" },
+      { "css": "[role=dialog]" },
+      { "css": "[class*=ant-modal]" }
+    ],
+    "rename_row_inputs": [
+      { "css": ".ant-modal-body .ant-table-body input.ant-input" },
+      { "css": ".ant-modal-body input.ant-input" },
+      { "css": "input[placeholder*='视频名称']" }
+    ],
+    "rename_textarea": [
+      { "css": "textarea" }
+    ],
+    "rename_name_input": [
+      { "placeholder": "请输入素材名" },
+      { "placeholder": "素材名" },
+      { "css": "input[type=text]" }
+    ],
+    "rename_confirm_button": [
+      { "css": ".ant-modal-footer button.ant-btn-primary" },
+      { "text": "确定" },
+      { "text": "保存" }
+    ]
+  }
+}

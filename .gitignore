@@ -1,0 +1,34 @@
+# 运行数据和个人配置（绝对不要提交）
+outputs/快手自动发布助手/config/config.json
+outputs/快手自动发布助手/runs/
+outputs/快手自动发布助手/logs/
+outputs/快手自动发布助手/报表/
+outputs/快手自动发布助手/启动日志.txt
+outputs/快手自动发布助手/启动失败.txt
+outputs/快手自动发布助手-免安装版.zip
+outputs/快手自动发布助手-免安装版/
+outputs/快手自动发布助手/使用说明.html
+outputs/快手自动发布助手/使用说明图片/
+outputs/快手自动发布助手/界面预览/
+work/portable/
+work/.ssh/
+work/.gitdata/
+work/cdp-probe*/
+work/demo-videos/
+work/ui-shots/
+work/probe*.bat
+work/启动日志.txt
+work/*.dmp
+
+# Python / 系统临时文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 本地 Git 元数据（当前环境根目录 .git 只读，使用可写副本）
+.git/
