@@ -720,6 +720,9 @@ class AutoApp:
         def job() -> None:
             with self._tasks_lock:
                 snapshot = {key: dict(value) for key, value in self.tasks.items()}
+            active_names = set(snapshot.keys())
+            for card in self.cards:
+                card.set_task_active(card.name_var.get().strip() in active_names)
             for name, task in snapshot.items():
                 card = self._task_card(name)
                 if card is None:
@@ -770,9 +773,11 @@ class AutoApp:
         with self._tasks_lock:
             task = self.tasks.get(name)
             browser = self.active_browsers.get(name)
-            if task is not None:
-                task["stop_event"].set()
-                task["status"] = "已请求停止"
+        if task is None:
+            self.append_log("账号「%s」当前没有在运行，停止请求已忽略" % name)
+            return
+        task["stop_event"].set()
+        task["status"] = "已请求停止"
         self.append_log("收到停止请求：%s" % name)
         if browser is not None:
             threading.Thread(target=self._close_browser, args=(browser,), daemon=True).start()
@@ -783,6 +788,41 @@ class AutoApp:
             browser.close()
         except Exception:
             pass
+
+    def _page_has_load_error(self, browser) -> bool:
+        try:
+            page = browser.page
+            if page is None:
+                return True
+            url = page.url or ""
+            if (not url) or url.startswith("about:blank") or "chrome-error" in url or "about:neterror" in url:
+                return True
+            for text in ("应用加载失败", "请刷新重试", "页面加载失败", "网络异常"):
+                if page.get_by_text(text, exact=False).count() > 0:
+                    return True
+        except Exception:
+            return True
+        return False
+
+    def _recover_account_page(self, browser, label: str, attempts: int = 2) -> bool:
+        for attempt in range(max(int(attempts), 1)):
+            try:
+                shot = self.bridge.shot(browser.page, "%s_页面恢复_%d" % (label, attempt + 1))
+            except Exception:
+                shot = ""
+            self.append_log(
+                "[%s] 检测到创作者页面加载失败，正在自动刷新恢复（第 %d/%d 次）；截图 %s"
+                % (label, attempt + 1, attempts, shot or "无")
+            )
+            try:
+                browser.page.reload(wait_until="domcontentloaded", timeout=60000)
+                browser.page.wait_for_timeout(2500)
+            except Exception as exc:
+                self.append_log("[%s] 自动刷新失败：%s" % (label, exc))
+            if not self._page_has_load_error(browser):
+                self.append_log("[%s] 页面已恢复，重新接入任务" % label)
+                return True
+        return False
 
     def set_status(self, text: str) -> None:
         def job() -> None:
@@ -1400,17 +1440,23 @@ class AutoApp:
                     )
                     name = account.get("name") or "未命名账号"
                     self.set_status("【%s】准备中…" % name)
-                    result = self._run_one_account(
-                        mode,
-                        account,
-                        videos,
-                        copies,
-                        settings,
-                        state,
-                        self.bridge,
-                        task_event=None,
-                        confirm_plan=True,
-                    )
+                    task_event = threading.Event()
+                    task_bridge = TaskBridge(self, name, task_event)
+                    self.register_task(name, task_event, len(videos))
+                    try:
+                        result = self._run_one_account(
+                            mode,
+                            account,
+                            videos,
+                            copies,
+                            settings,
+                            state,
+                            task_bridge,
+                            task_event=task_event,
+                            confirm_plan=True,
+                        )
+                    finally:
+                        self.unregister_task(name)
                     if result.get("stopped"):
                         break
                     if result.get("error"):
@@ -1611,7 +1657,20 @@ class AutoApp:
                     video_settings=target_settings,
                     dry_run=(mode == "dry"),
                 )
-                result = run_creator_account(ctx)
+                result = None
+                for recovery_attempt in range(3):
+                    try:
+                        result = run_creator_account(ctx)
+                        break
+                    except Exception as exc:
+                        if is_stopped():
+                            raise
+                        if recovery_attempt < 2 and self._page_has_load_error(browser):
+                            self._recover_account_page(browser, name, attempts=2)
+                            continue
+                        raise
+                if result is None:
+                    result = {"published": 0, "scheduled": []}
                 if mode == "publish":
                     for scheduled in result.get("scheduled") or []:
                         self.pending.add(
@@ -1639,7 +1698,17 @@ class AutoApp:
                     state,
                     self.logger,
                 )
-                run_jinniu_account(jctx, after_publish=(mode == "publish"))
+                for recovery_attempt in range(3):
+                    try:
+                        run_jinniu_account(jctx, after_publish=(mode == "publish"))
+                        break
+                    except Exception as exc:
+                        if is_stopped():
+                            raise
+                        if recovery_attempt < 2 and self._page_has_load_error(browser):
+                            self._recover_account_page(browser, name, attempts=2)
+                            continue
+                        raise
                 renamed_files = [
                     str(item.get("file") or "")
                     for item in state.items()

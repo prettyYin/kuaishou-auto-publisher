@@ -110,6 +110,12 @@ class AccountCard:
         self.task_status_var.set(status or "")
         self.task_progress_var.set(progress or "")
 
+    def set_task_active(self, active: bool) -> None:
+        try:
+            self.stop_button.configure(state="normal" if active else "disabled")
+        except Exception:
+            pass
+
     # ---------- 数据 ----------
     def set_copies(self, raw: str, strip_index: bool = False, batch: bool = False) -> None:
         self.raw_text = raw or ""
@@ -164,6 +170,7 @@ class AccountCard:
                     except Exception:
                         pass
         try:
-            self.stop_button.configure(state="normal" if running else "disabled")
+            if not running:
+                self.stop_button.configure(state="disabled")
         except Exception:
             pass
