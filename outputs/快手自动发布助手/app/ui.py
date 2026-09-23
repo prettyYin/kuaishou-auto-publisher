@@ -26,7 +26,7 @@ from .flow_jinniu import JinniuContext
 from .flow_jinniu import run_account as run_jinniu_account
 from .logger import setup_logger
 from .pending import PendingRenameStore
-from .parallel import normalize_max_accounts, preflight_parallel, run_parallel_jobs
+from .parallel import preflight_parallel, run_parallel_jobs
 from .publish_settings import (
     format_publish_at,
     has_scheduled,
@@ -188,9 +188,6 @@ class AutoApp:
         self._run_done = 0
         self._run_total = 0
         self.auto_rename = tk.BooleanVar(value=True)
-        self.parallel_max = tk.StringVar(
-            value=str((self.cfg.get("creator") or {}).get("parallel_max_accounts", 2))
-        )
         self.publish_settings: dict = {}
         self.pending = PendingRenameStore().load()
 
@@ -328,25 +325,15 @@ class AutoApp:
         self.btn_dry.pack(side="left", padx=4)
         self.btn_publish = ttk.Button(bar, text="▶ 开始上传发布", style="Go.TButton", command=lambda: self.start_run("publish"))
         self.btn_publish.pack(side="left", padx=10)
-        self.btn_rename = ttk.Button(bar, text="只改金牛素材名", style="Big.TButton", command=lambda: self.start_run("rename"))
-        self.btn_rename.pack(side="left", padx=4)
         self.btn_parallel = ttk.Button(
             bar,
-            text="▶ 同步开始上传发布",
+            text="▶ 同时开始上传发布",
             style="Go.TButton",
             command=lambda: self.start_run("publish", parallel=True),
         )
-        self.btn_parallel.pack(side="left", padx=4)
-        ttk.Label(bar, text="同时最多").pack(side="left", padx=(8, 2))
-        self.parallel_spin = ttk.Spinbox(
-            bar,
-            from_=1,
-            to=5,
-            width=4,
-            textvariable=self.parallel_max,
-        )
-        self.parallel_spin.pack(side="left")
-        ttk.Label(bar, text="个账号").pack(side="left", padx=(2, 6))
+        self.btn_parallel.pack(side="left", padx=10)
+        self.btn_rename = ttk.Button(bar, text="只改金牛素材名", style="Big.TButton", command=lambda: self.start_run("rename"))
+        self.btn_rename.pack(side="left", padx=4)
         self.btn_stop = ttk.Button(bar, text="⏹ 停止", style="Big.TButton", command=self.stop_run, state="disabled")
         self.btn_stop.pack(side="right", padx=4)
         self.confirm_run = tk.BooleanVar(
@@ -922,10 +909,11 @@ class AutoApp:
             for item in sorted(items, key=lambda x: (str(x.get("account")), int(x.get("index", 0))))
         ]
         published = sum(1 for item in items if item.get("publish_status") == "已发布")
-        table_dialog(
+        clear_requested = table_dialog(
             self.root,
             "今日进度",
-            self.state.summary() + "　（若某条其实没发出去，可用下面的选项清空今天的记录）",
+            self.state.summary()
+            + "　（关闭窗口不会清空；只有点「清空今天的记录」才会清空）",
             [
                 "账号",
                 "序号",
@@ -940,21 +928,13 @@ class AutoApp:
                 "备注",
             ],
             rows,
-            confirm_text="关闭",
-            cancel_text="",
+            confirm_text=("清空今天的记录（这些视频会重新发布）" if published else "关闭"),
+            cancel_text=("关闭" if published else ""),
         )
-        if published:
-            answer = self.bridge.rescue(
-                "要不要清空今天的记录？",
-                "今天有 %d 条被标记为「已发布」。\n\n"
-                "如果其中有些其实没发出去（比如之前浏览器异常被误判），清空后它们会重新发布；\n"
-                "真正发出去的那几条清空后会再发一遍（作品不会消失，只是重复一次）。" % published,
-                ["不用了，保持现状", "清空今天的记录（这些视频会重新发布）"],
-            )
-            if answer.startswith("清空"):
-                self.state.reset()
-                self.set_status("已清空今日记录，可以重新发布了")
-                self.append_log("已清空今日记录（清除了 %d 条已发布标记）" % published)
+        if published and clear_requested:
+            self.state.reset()
+            self.set_status("已清空今日记录，可以重新发布了")
+            self.append_log("已清空今日记录（清除了 %d 条已发布标记）" % published)
 
     def run_background(self, fn: Callable[[], Any], busy_text: str = "处理中…") -> None:
         if self.worker is not None and self.worker.is_alive():
@@ -1039,10 +1019,6 @@ class AutoApp:
             except Exception:
                 pass
         try:
-            self.parallel_spin.configure(state="disabled" if running else "normal")
-        except Exception:
-            pass
-        try:
             self.btn_stop.configure(state="normal" if running else "disabled")
         except Exception:
             pass
@@ -1069,19 +1045,7 @@ class AutoApp:
         if not targets:
             messagebox.showwarning("没有可跑的账号", "请在要发的账号卡片上打勾，并确认素材文件夹和广告语都填好了。", parent=self.root)
             return
-        max_accounts = normalize_max_accounts(self.parallel_max.get(), default=2)
-        self.parallel_max.set(str(max_accounts))
-        creator_settings = self.cfg.setdefault("creator", {})
-        creator_settings["parallel_max_accounts"] = max_accounts
-        creator_settings["parallel_start_interval_seconds"] = 0
-        self.save_config()
-        if parallel and max_accounts < 2:
-            messagebox.showinfo(
-                "并发数为 1",
-                "同时最多账号数为 1，将按普通串行方式运行。",
-                parent=self.root,
-            )
-            parallel = False
+        max_accounts = len(targets) if parallel else 1
         if parallel:
             problems = preflight_parallel(self.cfg, [item[0] for item in targets])
             if problems:
@@ -1103,7 +1067,6 @@ class AutoApp:
                     return
                 self.cfg.setdefault("creator", {})["parallel_risk_acked"] = True
                 self.save_config()
-            max_accounts = min(max_accounts, len(targets))
         pending_login = [
             item[0].get("name") for item in targets if not item[0].get("browser_ready")
         ]
@@ -1122,7 +1085,8 @@ class AutoApp:
             limit = int(self.cfg.get("creator", {}).get("daily_total_limit", 120))
             extra = "\n注意：今天共 %d 条，超过了你设定的上限 %d 条。" % (total, limit) if total > limit else ""
             order_text = (
-                "将同时运行最多 %d 个账号；每个账号内部仍然逐条上传、逐条发布。" % max_accounts
+                "将同时运行你勾选的 %d 个账号；每个账号内部仍然逐条上传、逐条发布。"
+                % len(targets)
                 if parallel
                 else "将按账号顺序一个一个来，每个账号开始前还会让你核对一次对照表。"
             )
@@ -1138,6 +1102,7 @@ class AutoApp:
             if not targets:
                 messagebox.showinfo("没有已确认的账号", "所有账号都被跳过了，本次不运行。", parent=self.root)
                 return
+            max_accounts = len(targets)
         self.stop_event.clear()
         with self._tasks_lock:
             self.tasks = {}

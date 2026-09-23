@@ -645,11 +645,10 @@ def test_ui_import() -> None:
             "卡片 %d / 配置 %d" % (accounts, expected),
         )
         check(
-            "主界面有并行执行入口和并发数设置",
+            "主界面有同时开始上传发布入口",
             hasattr(app, "btn_parallel")
-            and hasattr(app, "parallel_spin")
-            and app.parallel_max.get().isdigit(),
-            str(getattr(app, "parallel_max", None)),
+            and "同时开始上传发布" in str(app.btn_parallel.cget("text")),
+            str(getattr(app, "btn_parallel", None)),
         )
         check(
             "账号卡片有独立停止按钮和任务状态",
