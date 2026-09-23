@@ -298,7 +298,21 @@ class AutoApp:
         canvas.pack(side="left", fill="both", expand=True)
         scroll.pack(side="right", fill="y")
         inner.bind("<Configure>", lambda event: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.bind_all("<MouseWheel>", lambda event: canvas.yview_scroll(int(-1 * (event.delta / 120)), "units"))
+        self.cards_canvas = canvas
+
+        def cards_wheel(event):
+            try:
+                node = self.root.winfo_containing(event.x_root, event.y_root)
+            except Exception:
+                node = None
+            while node is not None:
+                if node == canvas:
+                    canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+                    return "break"
+                node = getattr(node, "master", None)
+            return None
+
+        canvas.bind_all("<MouseWheel>", cards_wheel, add="+")
         self.cards_container = inner
 
         cards_bar = ttk.Frame(self.tab_today)
@@ -337,23 +351,36 @@ class AutoApp:
         ttk.Label(bar, text="个账号").pack(side="left", padx=(2, 6))
         self.btn_stop = ttk.Button(bar, text="⏹ 停止", style="Big.TButton", command=self.stop_run, state="disabled")
         self.btn_stop.pack(side="right", padx=4)
-        ttk.Checkbutton(bar, text="上传发布完成后自动改名", variable=self.auto_rename).pack(side="right", padx=10)
         self.confirm_run = tk.BooleanVar(
             value=bool(self.cfg.get("creator", {}).get("confirm_before_run", True))
         )
-        ttk.Checkbutton(
-            bar, text="上传前确认对照表", variable=self.confirm_run, command=self.save_toggles
-        ).pack(side="right", padx=6)
         self.confirm_rename = tk.BooleanVar(
             value=bool(self.cfg.get("jinniu", {}).get("confirm_mapping", False))
         )
-        ttk.Checkbutton(
-            bar, text="改名前确认对照表", variable=self.confirm_rename, command=self.save_toggles
-        ).pack(side="right", padx=6)
         self.limit_var = tk.StringVar(value="0")
         ttk.Label(bar, text="本次每账号最多处理").pack(side="right", padx=(10, 2))
         ttk.Spinbox(bar, from_=0, to=200, width=4, textvariable=self.limit_var).pack(side="right")
         ttk.Label(bar, text="条（0=全部）").pack(side="right")
+
+        options_bar = ttk.Frame(action_box)
+        options_bar.pack(fill="x", padx=8, pady=(0, 8))
+        ttk.Checkbutton(
+            options_bar,
+            text="上传发布完成后自动改名",
+            variable=self.auto_rename,
+        ).pack(side="left", padx=(0, 16))
+        ttk.Checkbutton(
+            options_bar,
+            text="上传前确认对照表",
+            variable=self.confirm_run,
+            command=self.save_toggles,
+        ).pack(side="left", padx=(0, 16))
+        ttk.Checkbutton(
+            options_bar,
+            text="改名前确认对照表",
+            variable=self.confirm_rename,
+            command=self.save_toggles,
+        ).pack(side="left")
 
         status_row = ttk.Frame(self.tab_today)
         status_row.pack(fill="x", padx=14, pady=(4, 0))
@@ -622,13 +649,18 @@ class AutoApp:
             when = str(item.get("publish_at") or "").replace("T", " ")[:16]
             lines.append("· %s：%s%s" % (item.get("account", ""), item.get("file", ""), ("（%s）" % when) if when else ""))
         self.append_log("有 %d 条定时发布素材待手动改金牛素材名" % len(items))
-        messagebox.showinfo(
+        answer = rescue_dialog(
+            self.root,
             "有定时发布的素材待改名",
             "有 %d 条定时发布的视频还没有改金牛素材名。\n\n%s\n\n"
-            "工具不会自动改这些素材；请在合适的时候手动点「只改金牛素材名」。"
+            "如果你已经在金牛素材库里手动改完了，点第一项清除待办；"
+            "否则请稍后手动点「只改金牛素材名」。"
             % (len(items), "\n".join(lines)),
-            parent=self.root,
+            ["我已经改完名了，清除待办", "稍后再说"],
         )
+        if answer == "我已经改完名了，清除待办":
+            removed = self.pending.clear_all()
+            self.append_log("已清除 %d 条待改金牛素材名待办（用户确认已手动改完）" % removed)
 
     def preview_account(self, card) -> None:
         videos, copies = self.account_plan(card)
@@ -1215,14 +1247,18 @@ class AutoApp:
         if not messagebox.askyesno(
             "重置今日进度",
             "会清空工具里「今天已发布」的记录，重新运行时这些视频会再发一遍。\n"
+            "同时会清除「定时发布待改金牛素材名」的待办（视为你已经处理完）。\n"
             "（已经发布出去的作品不会消失，只是会重复发布一次）\n\n确定要重置吗？",
             parent=self.root,
         ):
             return
         self.state = RunState.load(cfgmod.RUN_DIR, datetime.now().strftime("%Y-%m-%d"))
         self.state.reset()
+        removed_pending = self.pending.clear_all()
         self.set_status("已重置今日进度，所有视频都会重新处理")
         self.append_log("已重置今日进度（清空断点记录）")
+        if removed_pending:
+            self.append_log("已清除 %d 条待改金牛素材名待办（重置今日进度视为已完成）" % removed_pending)
 
     def _run_worker_legacy(self, mode: str, targets) -> None:
         """旧版串行实现，保留作回滚参考；当前实际入口是后面的 _run_worker。"""
@@ -1607,7 +1643,8 @@ class AutoApp:
                 setting_problems.append("第 %d 条：%s" % (item_index, problem))
         if setting_problems:
             message = "账号「%s」的发布设置没有通过：\n%s" % (name, "\n".join(setting_problems))
-            bridge.confirm("发布设置需要修改", message)
+            self.append_log("[%s] %s" % (name, message))
+            bridge.status("发布设置未通过，已跳过该账号")
             return dict(result, error="发布设置未通过")
 
         scheduled_present = has_scheduled(
@@ -1770,8 +1807,9 @@ class AutoApp:
                 self.root.lift()
             except Exception:
                 pass
-            self.bridge._call(
-                lambda: text_dialog(self.root, "本次运行结束", content, 900, 620, modal=False)
+            self.root.after(
+                0,
+                lambda: text_dialog(self.root, "本次运行结束", content, 900, 620, modal=False),
             )
             self.append_log("—— 本次运行结束 ——")
             self.append_log(content)

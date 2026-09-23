@@ -90,3 +90,12 @@ class PendingRenameStore:
             if not items:
                 return "没有待改名的金牛素材"
             return "有 %d 条定时发布的素材待手动改金牛素材名" % len(items)
+
+    def clear_all(self) -> int:
+        """用户确认已手动改完名，或重置今日进度时清空全部待办。"""
+        with self._lock:
+            removed = len(self.data.get("entries") or [])
+            if removed:
+                self.data["entries"] = []
+                self.save()
+            return removed

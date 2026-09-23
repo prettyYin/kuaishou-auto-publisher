@@ -241,6 +241,28 @@ def same_site(current_url: str, target_url: str) -> bool:
     return host in (current_url or "")
 
 
+def recover_page_errors(ctx: CreatorContext, attempts: int = 2) -> bool:
+    """创作者平台出现「应用加载失败」时，先自动刷新 2 次再决定是否放弃。"""
+    for attempt in range(max(int(attempts), 1)):
+        if not exists_any(ctx.page, _cands(ctx, "page_error")):
+            return True
+        shot = ctx.bridge.shot(ctx.page, "应用加载失败_第%d次刷新" % (attempt + 1))
+        ctx.logger.warning(
+            "页面显示「应用加载失败」，正在自动刷新重试（第 %d/%d 次）；截图 %s",
+            attempt + 1,
+            attempts,
+            shot or "无",
+        )
+        try:
+            ctx.page.reload(wait_until="domcontentloaded", timeout=60000)
+            ctx.page.wait_for_timeout(2500)
+        except Exception as exc:
+            ctx.logger.warning("自动刷新失败：%s", exc)
+    if exists_any(ctx.page, _cands(ctx, "page_error")):
+        raise DefiniteFailure("创作者平台连续刷新 %d 次后仍然显示「应用加载失败」" % attempts)
+    return True
+
+
 def ensure_upload_page(ctx: CreatorContext, force_navigate: bool = False):
     """确保当前页面可以上传视频，返回文件输入框 Locator。"""
     publish_url = ctx.creator.get("publish_url") or ""
@@ -255,6 +277,7 @@ def ensure_upload_page(ctx: CreatorContext, force_navigate: bool = False):
         ctx.logger.info("重新打开上传页：%s", publish_url)
         ctx.page.goto(publish_url, wait_until="domcontentloaded", timeout=90000)
         ctx.page.wait_for_timeout(1500)
+    recover_page_errors(ctx, attempts=2)
     _check_login(ctx)
     handle_resume_dialog(ctx)
     file_input = find_any(ctx.page, _cands(ctx, "file_input"), timeout=8, need_visible=False)
@@ -331,8 +354,9 @@ def wait_upload_ready(ctx: CreatorContext, file_name: str) -> None:
             raise StoppedByUser("用户停止运行")
         # 页面本身崩了（例如"应用加载失败，请刷新重试"）→ 立刻刷新重试，不要干等
         if exists_any(ctx.page, _cands(ctx, "page_error")):
-            shot = ctx.bridge.shot(ctx.page, "上传页加载失败")
-            raise DefiniteFailure("上传页显示「应用加载失败」，已截图 %s，将刷新后重试这一条" % (shot or "无"))
+            recover_page_errors(ctx, attempts=2)
+            last_progress = time.time()
+            continue
         if time.time() - last_progress > stall_limit:
             shot = ctx.bridge.shot(ctx.page, "上传页无响应")
             raise DefiniteFailure(

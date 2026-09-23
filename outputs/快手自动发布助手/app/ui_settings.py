@@ -46,6 +46,21 @@ class SettingsTab:
         canvas.pack(side="left", fill="both", expand=True)
         scroll.pack(side="right", fill="y")
         inner.bind("<Configure>", lambda event: canvas.configure(scrollregion=canvas.bbox("all")))
+        self.canvas = canvas
+
+        def settings_wheel(event):
+            try:
+                node = app.root.winfo_containing(event.x_root, event.y_root)
+            except Exception:
+                node = None
+            while node is not None:
+                if node == canvas:
+                    canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+                    return "break"
+                node = getattr(node, "master", None)
+            return None
+
+        canvas.bind_all("<MouseWheel>", settings_wheel, add="+")
 
         head = ttk.Frame(inner)
         head.pack(fill="x", padx=12, pady=(10, 4))

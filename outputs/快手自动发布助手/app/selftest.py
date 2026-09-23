@@ -273,6 +273,8 @@ def test_pending_rename_store() -> None:
         check("定时发布的视频会进入待改名台账", len(store.entries()) == 2, str(store.entries()))
         removed = store.resolve("账号A", ["视频1.mp4"])
         check("金牛改名成功后能核销待办", removed == 1 and len(store.entries()) == 1, str(store.entries()))
+        cleared = store.clear_all()
+        check("用户确认已手动改完名时能清空剩余待办", cleared == 1 and store.entries() == [], str(store.entries()))
 
 
 def test_publish_config_and_selectors() -> None:
