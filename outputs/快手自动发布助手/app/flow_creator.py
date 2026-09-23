@@ -263,6 +263,31 @@ def recover_page_errors(ctx: CreatorContext, attempts: int = 2) -> bool:
     return True
 
 
+def page_has_load_error(ctx: CreatorContext) -> bool:
+    return exists_any(ctx.page, _cands(ctx, "page_error"))
+
+
+def goto_creator_page(ctx: CreatorContext, url: str, attempts: int = 2) -> None:
+    """打开发布页时如果页面已崩溃，先恢复再跳转，避免卡在超长 goto 上。"""
+    for attempt in range(max(int(attempts), 1)):
+        if page_has_load_error(ctx):
+            recover_page_errors(ctx, attempts=2)
+        try:
+            ctx.page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            ctx.page.wait_for_timeout(1800)
+        except Exception as exc:
+            ctx.logger.warning(
+                "打开发布页失败或超时（第 %d/%d 次）：%s",
+                attempt + 1,
+                attempts,
+                exc,
+            )
+        recover_page_errors(ctx, attempts=2)
+        if not page_has_load_error(ctx) and same_site(ctx.page.url or "", url):
+            return
+    raise DefiniteFailure("连续 %d 次都打不开创作者发布页" % attempts)
+
+
 def ensure_upload_page(ctx: CreatorContext, force_navigate: bool = False):
     """确保当前页面可以上传视频，返回文件输入框 Locator。"""
     publish_url = ctx.creator.get("publish_url") or ""
@@ -270,13 +295,12 @@ def ensure_upload_page(ctx: CreatorContext, force_navigate: bool = False):
     # 必须站在创作者平台的页面上，否则可能把文件塞进别的页面（比如金牛的上传入口）
     if publish_url and not same_site(current_url, publish_url) and not force_navigate:
         ctx.logger.info("当前页面 %s 不是发布页，先跳转到 %s", current_url or "空白页", publish_url)
-        ctx.page.goto(publish_url, wait_until="domcontentloaded", timeout=90000)
-        ctx.page.wait_for_timeout(2000)
+        goto_creator_page(ctx, publish_url, attempts=2)
         handle_resume_dialog(ctx)
     if force_navigate and publish_url:
         ctx.logger.info("重新打开上传页：%s", publish_url)
-        ctx.page.goto(publish_url, wait_until="domcontentloaded", timeout=90000)
-        ctx.page.wait_for_timeout(1500)
+        goto_creator_page(ctx, publish_url, attempts=2)
+        ctx.page.wait_for_timeout(500)
     recover_page_errors(ctx, attempts=2)
     _check_login(ctx)
     handle_resume_dialog(ctx)
@@ -300,8 +324,8 @@ def ensure_upload_page(ctx: CreatorContext, force_navigate: bool = False):
             if publish_url:
                 ctx.logger.info("重新打开上传页：%s", publish_url)
                 try:
-                    ctx.page.goto(publish_url, wait_until="domcontentloaded", timeout=90000)
-                    ctx.page.wait_for_timeout(2500)
+                    goto_creator_page(ctx, publish_url, attempts=2)
+                    ctx.page.wait_for_timeout(700)
                     handle_resume_dialog(ctx)
                 except Exception as exc:
                     ctx.logger.warning("重新打开上传页失败：%s", exc)
@@ -917,8 +941,8 @@ def back_to_upload(ctx: CreatorContext) -> None:
             pass
     publish_url = ctx.creator.get("publish_url") or ""
     if publish_url:
-        ctx.page.goto(publish_url, wait_until="domcontentloaded", timeout=90000)
-        ctx.page.wait_for_timeout(1500)
+        goto_creator_page(ctx, publish_url, attempts=2)
+        ctx.page.wait_for_timeout(500)
 
 
 def publish_once(ctx: CreatorContext, video, copy_text: str, setting: Optional[Dict[str, Any]] = None):
